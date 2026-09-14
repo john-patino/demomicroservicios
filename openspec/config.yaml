@@ -1,0 +1,16 @@
+schema: spec-driven
+
+context: |
+  Architecture: Microservices with C# (.NET 8 Web API) and React 18+ (TypeScript + Vite + Tailwind CSS)
+  Gateway: YARP (Yet Another Reverse Proxy) on port 5000
+  Observability: Serilog + Seq (port 5341) with mandatory distributed tracing via X-Correlation-ID header
+  Databases: Isolated PostgreSQL per microservice (users_db, products_db, orders_db)
+  Containerization: Docker Compose orchestrating all services, databases, gateway, seq, and frontend
+  Key Services:
+    - UserService (PostgreSQL users_db): Auth & Identity
+    - ProductService (PostgreSQL products_db): Catalog & Stock deduction
+    - OrderService (PostgreSQL orders_db): Synchronous checkout orchestration
+    - ApiGateway (YARP): Reverse proxy, CORS, header propagation
+    - Client (React SPA): UI with real-time Correlation ID telemetry bar
+  Methodology: Spec-Driven Development (SDD) adhering to microservices_c_and_react_demo_constitution.md
+
