@@ -141,3 +141,26 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Agent & Skills (Herramientas, Reglas y Constitución de IA)
+.agent/
+.agents/
+.gemini/
+AGENTS.md
+GEMINI.md
+microservices_c_and_react_demo_constitution.md
+
+# OpenSpec & Specs (Especificaciones funcionales y de arquitectura)
+openspec/
+specs/
+
+# .NET Build Artifacts & IDE
+**/bin/
+**/obj/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+.vs/
+.vscode/
+

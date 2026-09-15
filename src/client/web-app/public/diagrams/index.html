@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Arquitectura & Diagramas · Demo Microservicios</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-bg:       #161922;
+      --color-surface:  #1e2230;
+      --color-card:     #252b3d;
+      --color-card-active: #2e354d;
+      --color-border:   rgba(245, 245, 245, 0.10);
+      --color-border-focus: rgba(240, 138, 89, 0.40);
+      --color-ink:      #f5f5f5;
+      --color-muted:    #a4a9bd;
+      --color-accent:   #f08a59;
+      --color-link:     #6a95d8;
+      --color-success:  #38b2ac;
+      --font-sans:      'Geist', system-ui, sans-serif;
+      --font-serif:     'Instrument Serif', serif;
+      --font-mono:      'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--color-bg);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--color-accent), #d45d29);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-serif);
+      font-size: 1.35rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+      color: var(--color-ink);
+    }
+
+    .brand-text p {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--color-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 4px;
+      border: 1px solid var(--color-border);
+      background: rgba(245, 245, 245, 0.04);
+      color: var(--color-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-success);
+    }
+
+    /* Main Content Layout: Sidebar + Viewer Stage */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      flex: 1;
+      height: calc(100vh - 67px);
+      overflow: hidden;
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 1.25rem 1.5rem 0.75rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .sidebar-header h2 {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: rgba(245, 245, 245, 0.04);
+      border: 1px solid var(--color-border);
+      color: var(--color-muted);
+      padding: 0.25rem 0.55rem;
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover, .filter-btn.active {
+      background: var(--color-card-active);
+      color: var(--color-ink);
+      border-color: var(--color-accent);
+    }
+
+    .diagram-list {
+      list-style: none;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .diagram-item {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .diagram-item:hover {
+      background: var(--color-card-active);
+      border-color: rgba(240, 138, 89, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .diagram-item.active {
+      background: var(--color-card-active);
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-accent);
+    }
+
+    .diagram-item-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      background: rgba(245, 245, 245, 0.06);
+      color: var(--color-accent);
+      font-weight: 500;
+    }
+
+    .tag.blue { color: var(--color-link); }
+    .tag.green { color: var(--color-success); }
+
+    .diagram-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: rgba(245, 245, 245, 0.3);
+      font-weight: 600;
+    }
+
+    .diagram-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--color-ink);
+      line-height: 1.25;
+      margin-bottom: 0.35rem;
+    }
+
+    .diagram-desc {
+      font-size: 0.78rem;
+      color: var(--color-muted);
+      line-height: 1.4;
+    }
+
+    /* Viewer Stage */
+    main {
+      background: var(--color-bg);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .viewer-toolbar {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .viewer-info h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .viewer-info p {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-muted);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      background: rgba(245, 245, 245, 0.06);
+      border: 1px solid var(--color-border);
+      color: var(--color-ink);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.78rem;
+      font-family: var(--font-sans);
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background: var(--color-accent);
+      color: #fff;
+      border-color: var(--color-accent);
+    }
+
+    .viewer-viewport {
+      flex: 1;
+      position: relative;
+      background: #11131a;
+      overflow: hidden;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: transparent;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 240px 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-logo">D</div>
+      <div class="brand-text">
+        <h1>Microservicios & Observabilidad</h1>
+        <p>Centro de Diagramas Editoriales · diagram-design</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        <span>6 DIAGRAMAS ACTIVOS</span>
+      </div>
+      <div class="badge">
+        <span>EDICIÓN: MODO OSCURO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside>
+      <div class="sidebar-header">
+        <h2>Filtro de Catálogo</h2>
+        <div class="filter-pills">
+          <button class="filter-btn active" onclick="filterDiagrams('all')">Todos (6)</button>
+          <button class="filter-btn" onclick="filterDiagrams('topologia')">Topología</button>
+          <button class="filter-btn" onclick="filterDiagrams('flujo')">Flujo & Lógica</button>
+          <button class="filter-btn" onclick="filterDiagrams('infra')">Infra & Datos</button>
+        </div>
+      </div>
+
+      <ul class="diagram-list" id="diagramList">
+        <!-- Item 1: Architecture -->
+        <li class="diagram-item active" data-category="topologia" onclick="selectDiagram('microservices-architecture-dark.html', 'Topología de Microservicios & Seq', 'Architecture · Enrutamiento YARP y Sumidero Seq', this)">
+          <div class="diagram-item-meta">
+            <span class="tag">ARQUITECTURA</span>
+            <span class="diagram-num">01</span>
+          </div>
+          <div class="diagram-title">Topología de Servicios & Seq</div>
+          <div class="diagram-desc">Enrutamiento centralizado vía YARP Reverse Proxy a UserService, ProductService y OrderService con Seq.</div>
+        </li>
+
+        <!-- Item 2: Sequence -->
+        <li class="diagram-item" data-category="flujo" onclick="selectDiagram('correlation-id-sequence-dark.html', 'Propagación de X-Correlation-ID', 'Sequence · Ciclo de Vida HTTP y LogContext de Serilog', this)">
+          <div class="diagram-item-meta">
+            <span class="tag blue">SECUENCIA</span>
+            <span class="diagram-num">02</span>
+          </div>
+          <div class="diagram-title">Propagación de X-Correlation-ID</div>
+          <div class="diagram-desc">Viaje paso a paso del encabezado de correlación desde React, pasando por YARP y servicios hasta Seq.</div>
+        </li>
+
+        <!-- Item 3: Deployment -->
+        <li class="diagram-item" data-category="infra" onclick="selectDiagram('docker-deployment-dark.html', 'Despliegue Docker Compose', 'Deployment · Redes Bridge, Contenedores y Volúmenes', this)">
+          <div class="diagram-item-meta">
+            <span class="tag green">DESPLIEGUE</span>
+            <span class="diagram-num">03</span>
+          </div>
+          <div class="diagram-title">Despliegue en Contenedores Docker</div>
+          <div class="diagram-desc">Aislamiento en red microservices-net, contenedores versionados, volúmenes de PostgreSQL y Seq.</div>
+        </li>
+
+        <!-- Item 4: State Machine -->
+        <li class="diagram-item" data-category="flujo" onclick="selectDiagram('order-state-machine-dark.html', 'Ciclo de Vida de Pedidos', 'State Machine · Transiciones, Guardas y Compensación', this)">
+          <div class="diagram-item-meta">
+            <span class="tag blue">ESTADOS</span>
+            <span class="diagram-num">04</span>
+          </div>
+          <div class="diagram-title">Máquina de Estados (OrderService)</div>
+          <div class="diagram-desc">Transiciones finitas desde Pending hasta Completed, con rutas de fallo y compensación hacia Cancelled.</div>
+        </li>
+
+        <!-- Item 5: Database Schema -->
+        <li class="diagram-item" data-category="infra" onclick="selectDiagram('database-schema-dark.html', 'Modelos Físicos de Datos', 'Database Schema · Database-per-service en PostgreSQL', this)">
+          <div class="diagram-item-meta">
+            <span class="tag green">BASE DE DATOS</span>
+            <span class="diagram-num">05</span>
+          </div>
+          <div class="diagram-title">Esquema Relacional PostgreSQL</div>
+          <div class="diagram-desc">Tablas de UsersDb, ProductsDb y OrdersDb con restricciones físicas y eliminación en cascada.</div>
+        </li>
+
+        <!-- Item 6: Flowchart -->
+        <li class="diagram-item" data-category="flujo" onclick="selectDiagram('resilience-flowchart-dark.html', 'Resiliencia & Circuit Breaker', 'Flowchart · Sondeos /health, Reintentos y Fallback', this)">
+          <div class="diagram-item-meta">
+            <span class="tag">FLUJO</span>
+            <span class="diagram-num">06</span>
+          </div>
+          <div class="diagram-title">Resiliencia & Circuit Breaker</div>
+          <div class="diagram-desc">Lógica de decisión del Gateway ante caídas de servicios: monitoreo activo y respuestas degradadas 503.</div>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Viewer Stage -->
+    <main>
+      <div class="viewer-toolbar">
+        <div class="viewer-info">
+          <h3 id="currentTitle">Topología de Microservicios & Seq</h3>
+          <p id="currentMeta">Architecture · Enrutamiento YARP y Sumidero Seq</p>
+        </div>
+        <div class="toolbar-actions">
+          <a id="openNewTabBtn" href="microservices-architecture-dark.html" target="_blank" class="action-btn">
+            <span>↗</span> Abrir en Pestaña Nueva
+          </a>
+        </div>
+      </div>
+      <div class="viewer-viewport">
+        <iframe id="diagramFrame" src="microservices-architecture-dark.html" title="Visor de Diagrama"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function selectDiagram(filename, title, meta, itemElement) {
+      // Update iframe source
+      document.getElementById('diagramFrame').src = filename;
+      document.getElementById('currentTitle').innerText = title;
+      document.getElementById('currentMeta').innerText = meta;
+      document.getElementById('openNewTabBtn').href = filename;
+
+      // Update active list state
+      const items = document.querySelectorAll('.diagram-item');
+      items.forEach(item => item.classList.remove('active'));
+      if (itemElement) {
+        itemElement.classList.add('active');
+      }
+    }
+
+    function filterDiagrams(category) {
+      // Update button states
+      const btns = document.querySelectorAll('.filter-btn');
+      btns.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // Filter list items
+      const items = document.querySelectorAll('.diagram-item');
+      items.forEach(item => {
+        if (category === 'all' || item.dataset.category === category) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

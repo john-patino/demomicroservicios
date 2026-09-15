@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esquema Físico de Base de Datos · Database Schema</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #2d3142;
+      --color-paper-2: #393e53;
+      --color-ink:     #f5f5f5;
+      --color-muted:   #bfc0c0;
+      --color-accent:  #f08a59;
+      --color-link:    #6a95d8;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1160px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 2.5vw + 0.8rem, 2.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--color-muted);
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .diagram-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 1000px;
+      display: block;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--color-paper-2);
+      border: 1px solid rgba(245, 245, 245, 0.12);
+      border-radius: 6px;
+      padding: 1.25rem;
+    }
+
+    .card .eyebrow {
+      font-size: 0.64rem;
+      color: var(--color-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.blue { background: var(--color-link); }
+    .card-dot.muted { background: var(--color-muted); }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .card ul {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .card ul li::before {
+      content: "— ";
+      color: rgba(245, 245, 245, 0.4);
+    }
+
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(245, 245, 245, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Persistencia Políglota · Esquema Físico</p>
+    <h1>Modelos de Datos Aislados (Database-per-service)</h1>
+    <p class="subtitle">Estructuras relacionales de PostgreSQL: UsersDb, ProductsDb y OrdersDb con restricciones físicas de integridad y claves foráneas en cascada.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1080 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="db-schema-dark-title db-schema-dark-desc">
+        <title id="db-schema-dark-title">Esquema de Bases de Datos de Microservicios</title>
+        <desc id="db-schema-dark-desc">Diagrama de esquema físico con las tablas users, products, orders y order_items, mostrando tipos de datos SQL, claves primarias y eliminación en cascada.</desc>
+
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#f08a59"/>
+          </marker>
+        </defs>
+
+        <!-- Base Background -->
+        <rect width="100%" height="100%" fill="#2d3142"/>
+
+        <!-- Schema Group 1: UsersDb -->
+        <rect x="40" y="40" width="280" height="200" rx="8"
+              fill="rgba(245,245,245,0.02)" stroke="rgba(245,245,245,0.14)" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <text x="56" y="56" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">USERS_DB SCHEMA</text>
+
+        <!-- Schema Group 2: ProductsDb -->
+        <rect x="40" y="264" width="280" height="200" rx="8"
+              fill="rgba(245,245,245,0.02)" stroke="rgba(245,245,245,0.14)" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <text x="56" y="280" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">PRODUCTS_DB SCHEMA</text>
+
+        <!-- Schema Group 3: OrdersDb -->
+        <rect x="368" y="40" width="672" height="424" rx="8"
+              fill="rgba(245,245,245,0.02)" stroke="rgba(245,245,245,0.14)" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <text x="384" y="56" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">ORDERS_DB SCHEMA</text>
+
+        <!-- ================= FK CONNECTORS (Drawn First) ================= -->
+
+        <!-- FK1: order_items.order_id -> orders.id (ON DELETE CASCADE · Focal Coral) -->
+        <path d="M 720,208 H 688 Q 680,208 680,200 V 104 Q 680,96 688,96 H 700"
+              fill="none" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Loose Boundary Trace: orders.user_id -> users.id (Dashed reference) -->
+        <path d="M 400,120 H 352 Q 344,120 344,112 V 104 Q 344,96 336,96 H 296"
+              fill="none" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- ================= FK LABELS ================= -->
+        <rect x="620" y="148" width="104" height="12" rx="2" fill="#2d3142"/>
+        <text x="672" y="157" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">ON DELETE CASCADE</text>
+
+        <rect x="304" y="104" width="76" height="12" rx="2" fill="#2d3142"/>
+        <text x="342" y="113" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CORRELATION ID</text>
+
+        <!-- ================= TABLES ================= -->
+
+        <!-- Table 1: users_db.users -->
+        <rect x="56" y="68" width="248" height="152" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <rect x="56" y="68" width="248" height="28" rx="6" fill="#2d3142"/>
+        <text x="68" y="86" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">users</text>
+        <line x1="56" y1="96" x2="304" y2="96" stroke="rgba(245,245,245,0.2)" stroke-width="0.8"/>
+        <!-- Columns -->
+        <text x="68" y="112" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">id</text>
+        <text x="140" y="112" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace">PK</text>
+        <text x="292" y="112" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="68" y="136" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">username</text>
+        <text x="140" y="136" fill="#8e98ac" font-size="8" font-family="'Geist Mono', monospace">UQ</text>
+        <text x="292" y="136" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">varchar(50)</text>
+
+        <text x="68" y="160" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">email</text>
+        <text x="140" y="160" fill="#8e98ac" font-size="8" font-family="'Geist Mono', monospace">UQ</text>
+        <text x="292" y="160" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">varchar(100)</text>
+
+        <text x="68" y="184" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">created_at</text>
+        <text x="292" y="184" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">timestamptz</text>
+
+        <!-- Table 2: products_db.products -->
+        <rect x="56" y="292" width="248" height="152" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <rect x="56" y="292" width="248" height="28" rx="6" fill="#2d3142"/>
+        <text x="68" y="310" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">products</text>
+        <line x1="56" y1="320" x2="304" y2="320" stroke="rgba(245,245,245,0.2)" stroke-width="0.8"/>
+        <!-- Columns -->
+        <text x="68" y="336" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">id</text>
+        <text x="140" y="336" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace">PK</text>
+        <text x="292" y="336" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="68" y="360" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">name</text>
+        <text x="292" y="360" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">text</text>
+
+        <text x="68" y="384" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">price</text>
+        <text x="292" y="384" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">numeric(10,2)</text>
+
+        <text x="68" y="408" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">stock</text>
+        <text x="292" y="408" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">integer</text>
+
+        <!-- Table 3: orders_db.orders -->
+        <rect x="400" y="68" width="280" height="176" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <rect x="400" y="68" width="280" height="28" rx="6" fill="#2d3142"/>
+        <text x="412" y="86" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">orders</text>
+        <line x1="400" y1="96" x2="680" y2="96" stroke="rgba(245,245,245,0.2)" stroke-width="0.8"/>
+        <!-- Columns -->
+        <text x="412" y="112" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">id</text>
+        <text x="500" y="112" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace">PK</text>
+        <text x="668" y="112" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="412" y="136" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">user_id</text>
+        <text x="500" y="136" fill="#8e98ac" font-size="8" font-family="'Geist Mono', monospace">EXT_ID</text>
+        <text x="668" y="136" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="412" y="160" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">total_amount</text>
+        <text x="668" y="160" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">numeric(12,2)</text>
+
+        <text x="412" y="184" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">status</text>
+        <text x="668" y="184" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">varchar(20)</text>
+
+        <text x="412" y="208" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">created_at</text>
+        <text x="668" y="208" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">timestamptz</text>
+
+        <!-- Table 4: orders_db.order_items (Focal) -->
+        <rect x="720" y="180" width="296" height="176" rx="6" fill="#393e53" stroke="#f08a59" stroke-width="1.2"/>
+        <rect x="720" y="180" width="296" height="28" rx="6" fill="rgba(240,138,89,0.12)"/>
+        <text x="732" y="198" fill="#f08a59" font-size="12" font-weight="600" font-family="'Geist', sans-serif">order_items</text>
+        <line x1="720" y1="208" x2="1016" y2="208" stroke="rgba(240,138,89,0.3)" stroke-width="0.8"/>
+        <!-- Columns -->
+        <text x="732" y="224" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">id</text>
+        <text x="836" y="224" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace">PK</text>
+        <text x="1004" y="224" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="732" y="248" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">order_id</text>
+        <text x="836" y="248" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace">FK · CASCADE</text>
+        <text x="1004" y="248" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="732" y="272" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">product_id</text>
+        <text x="836" y="272" fill="#8e98ac" font-size="8" font-family="'Geist Mono', monospace">EXT_ID</text>
+        <text x="1004" y="272" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">uuid</text>
+
+        <text x="732" y="296" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">quantity</text>
+        <text x="1004" y="296" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">integer</text>
+
+        <text x="732" y="320" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif">unit_price</text>
+        <text x="1004" y="320" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">numeric(10,2)</text>
+
+        <!-- ================= LEGEND STRIP ================= -->
+        <line x1="40" y1="480" x2="1040" y2="480" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+        <text x="40" y="496" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEYENDA</text>
+
+        <rect x="40" y="504" width="14" height="10" rx="2" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+        <text x="60" y="512" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Tabla Focal / Cascada</text>
+
+        <rect x="220" y="504" width="14" height="10" rx="2" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="240" y="512" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Tabla Estándar</text>
+
+        <line x1="380" y1="508" x2="408" y2="508" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <text x="416" y="512" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">FK Destructiva (CASCADE)</text>
+
+        <line x1="600" y1="508" x2="628" y2="508" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="636" y="512" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Referencia Externa (Guid Desacoplado)</text>
+      </svg>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="cards-grid">
+      <div class="card">
+        <p class="eyebrow">AISLAMIENTO DE DATOS</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>Database-per-Service</h3>
+        </div>
+        <ul>
+          <li>Cero joins directos de SQL entre microservicios diferentes.</li>
+          <li>Cada esquema evoluciona independientemente con EF Migrations.</li>
+          <li>Las llaves foráneas entre servicios son solo identificadores GUID.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">INTEGRIDAD EN EL AGREGADO</p>
+        <div class="card-header">
+          <span class="card-dot blue"></span>
+          <h3>Orders & OrderItems</h3>
+        </div>
+        <ul>
+          <li>Clave foránea relacional estricta dentro del mismo bounded context.</li>
+          <li><code>ON DELETE CASCADE</code> asegura que no queden ítems huérfanos.</li>
+          <li>Transacciones ACID garantizadas en PostgreSQL para la orden.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">CONSISTENCIA EVENTUAL</p>
+        <div class="card-header">
+          <span class="card-dot muted"></span>
+          <h3>Evolución de Esquemas</h3>
+        </div>
+        <ul>
+          <li>Cambios en <code>ProductsDb</code> no rompen los pedidos históricos.</li>
+          <li>Precios capturados en <code>unit_price</code> son inmutables al venderse.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Generado con diagram-design · Esquema Físico DDL</span>
+      <span>Database-per-service · PostgreSQL · EF Core</span>
+    </div>
+  </div>
+</body>
+</html>

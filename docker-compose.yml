@@ -1,0 +1,190 @@
+services:
+  seq:
+    image: datalust/seq:latest
+    container_name: seq-centralized-logs
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - microservices-net
+
+  postgres-users:
+    image: postgres:16-alpine
+    container_name: postgres-users
+    restart: always
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d users_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-products:
+    image: postgres:16-alpine
+    container_name: postgres-products
+    restart: always
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - products_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d products_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-orders:
+    image: postgres:16-alpine
+    container_name: postgres-orders
+    restart: always
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - orders_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orders_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  userservice:
+    build:
+      context: .
+      dockerfile: src/services/UserService/Dockerfile
+    container_name: userservice
+    restart: on-failure
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-users;Port=5432;Database=users_db;Username=postgres;Password=postgres
+      - SeqServerUrl=http://seq:80
+    depends_on:
+      postgres-users:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - microservices-net
+
+  productservice:
+    build:
+      context: .
+      dockerfile: src/services/ProductService/Dockerfile
+    container_name: productservice
+    restart: on-failure
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-products;Port=5432;Database=products_db;Username=postgres;Password=postgres
+      - SeqServerUrl=http://seq:80
+    depends_on:
+      postgres-products:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - microservices-net
+
+  orderservice:
+    build:
+      context: .
+      dockerfile: src/services/OrderService/Dockerfile
+    container_name: orderservice
+    restart: on-failure
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-orders;Port=5432;Database=orders_db;Username=postgres;Password=postgres
+      - Services__ProductService=http://productservice:8080
+      - Services__UserService=http://userservice:8080
+      - SeqServerUrl=http://seq:80
+    depends_on:
+      postgres-orders:
+        condition: service_healthy
+      productservice:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - microservices-net
+
+  apigateway:
+    build:
+      context: .
+      dockerfile: src/gateway/ApiGateway/Dockerfile
+    container_name: apigateway
+    restart: on-failure
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ReverseProxy__Clusters__users-cluster__Destinations__destination1__Address=http://userservice:8080
+      - ReverseProxy__Clusters__products-cluster__Destinations__destination1__Address=http://productservice:8080
+      - ReverseProxy__Clusters__orders-cluster__Destinations__destination1__Address=http://orderservice:8080
+      - SeqServerUrl=http://seq:80
+    depends_on:
+      userservice:
+        condition: service_started
+      productservice:
+        condition: service_started
+      orderservice:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - microservices-net
+
+  web-app:
+    build:
+      context: ./src/client/web-app
+      dockerfile: Dockerfile
+    container_name: react-web-app
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_GATEWAY_URL=http://localhost:5000/gateway
+      - NEXT_PUBLIC_SEQ_URL=http://localhost:5341
+    depends_on:
+      apigateway:
+        condition: service_started
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  seq_data:
+  users_db_data:
+  products_db_data:
+  orders_db_data:

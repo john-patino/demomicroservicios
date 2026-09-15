@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ciclo de Vida de Pedidos · Máquina de Estados</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #2d3142;
+      --color-paper-2: #393e53;
+      --color-ink:     #f5f5f5;
+      --color-muted:   #bfc0c0;
+      --color-accent:  #f08a59;
+      --color-link:    #6a95d8;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1120px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 2.5vw + 0.8rem, 2.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--color-muted);
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .diagram-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 960px;
+      display: block;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--color-paper-2);
+      border: 1px solid rgba(245, 245, 245, 0.12);
+      border-radius: 6px;
+      padding: 1.25rem;
+    }
+
+    .card .eyebrow {
+      font-size: 0.64rem;
+      color: var(--color-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.blue { background: var(--color-link); }
+    .card-dot.muted { background: var(--color-muted); }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .card ul {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .card ul li::before {
+      content: "— ";
+      color: rgba(245, 245, 245, 0.4);
+    }
+
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(245, 245, 245, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Lógica de Negocio · Máquina de Estados</p>
+    <h1>Ciclo de Vida de Pedidos (OrderService)</h1>
+    <p class="subtitle">Transiciones finitas, guardas de validación, compensaciones y finalización exitosa en el dominio de órdenes.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1040 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="state-dark-title state-dark-desc">
+        <title id="state-dark-title">Máquina de Estados de Pedidos</title>
+        <desc id="state-dark-desc">Diagrama de estados que modela el flujo desde Pending, pasando por StockReserved y Paid hasta Completed, con rutas de fallo hacia Cancelled.</desc>
+
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(245,245,245,0.08)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#f08a59"/>
+          </marker>
+        </defs>
+
+        <!-- Base Background -->
+        <rect width="100%" height="100%" fill="#2d3142"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.6"/>
+
+        <!-- ================= TRANSITIONS (Drawn First) ================= -->
+
+        <!-- Start -> Pending -->
+        <line x1="48" y1="200" x2="96" y2="200" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Pending -> StockReserved -->
+        <line x1="240" y1="200" x2="320" y2="200" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- StockReserved -> Paid -->
+        <line x1="472" y1="200" x2="552" y2="200" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Paid -> Completed (Coral Happy Path) -->
+        <line x1="696" y1="200" x2="776" y2="200" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Completed -> End ring -->
+        <line x1="936" y1="200" x2="980" y2="200" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Pending -> Cancelled (Down-right elbow) -->
+        <path d="M 168,240 V 336 Q 168,344 176,344 H 440"
+              fill="none" stroke="#bfc0c0" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- StockReserved -> Cancelled (Compensate stock) -->
+        <path d="M 396,240 V 312 Q 396,320 404,320 H 440"
+              fill="none" stroke="#bfc0c0" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- Cancelled -> End (Loop down to terminal end) -->
+        <path d="M 608,344 H 988 Q 996,344 996,336 V 212"
+              fill="none" stroke="#bfc0c0" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- ================= LABELS ================= -->
+        <!-- Label 1: Submit -->
+        <rect x="44" y="178" width="48" height="12" rx="2" fill="#2d3142"/>
+        <text x="68" y="187" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SUBMIT</text>
+
+        <!-- Label 2: Reserve Stock -->
+        <rect x="248" y="178" width="64" height="12" rx="2" fill="#2d3142"/>
+        <text x="280" y="187" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">RESERVE</text>
+
+        <!-- Label 3: Charge Payment -->
+        <rect x="480" y="178" width="64" height="12" rx="2" fill="#2d3142"/>
+        <text x="512" y="187" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">PROCESS</text>
+
+        <!-- Label 4: Fulfill (Coral) -->
+        <rect x="704" y="178" width="64" height="12" rx="2" fill="#2d3142"/>
+        <text x="736" y="187" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FULFILL</text>
+
+        <!-- Label 5: Out of stock -->
+        <rect x="200" y="322" width="104" height="12" rx="2" fill="#2d3142"/>
+        <text x="252" y="331" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">[NO STOCK / TIMEOUT]</text>
+
+        <!-- Label 6: Payment failed -->
+        <rect x="360" y="278" width="96" height="12" rx="2" fill="#2d3142"/>
+        <text x="408" y="287" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">[PAYMENT FAILED]</text>
+
+        <!-- ================= START & END SYMBOLS ================= -->
+        <!-- Start dot: filled ink dot r=6 -->
+        <circle cx="40" cy="200" r="6" fill="#f5f5f5"/>
+
+        <!-- End ring: outer r=8, inner filled r=5 -->
+        <circle cx="996" cy="200" r="8" fill="none" stroke="#f08a59" stroke-width="1.2"/>
+        <circle cx="996" cy="200" r="4.5" fill="#f08a59"/>
+
+        <!-- ================= STATES ================= -->
+
+        <!-- State 1: Pending -->
+        <rect x="96" y="160" width="144" height="80" rx="8" fill="#2d3142"/>
+        <rect x="96" y="160" width="144" height="80" rx="8" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="168" y="196" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Pending</text>
+        <text x="168" y="216" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">entry / emit OrderCreated</text>
+
+        <!-- State 2: StockReserved -->
+        <rect x="320" y="160" width="152" height="80" rx="8" fill="#2d3142"/>
+        <rect x="320" y="160" width="152" height="80" rx="8" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="396" y="196" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">StockReserved</text>
+        <text x="396" y="216" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">do / hold inventory</text>
+
+        <!-- State 3: Paid -->
+        <rect x="552" y="160" width="144" height="80" rx="8" fill="#2d3142"/>
+        <rect x="552" y="160" width="144" height="80" rx="8" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="624" y="196" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Paid</text>
+        <text x="624" y="216" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">entry / capture invoice</text>
+
+        <!-- State 4: Completed (Coral Focal) -->
+        <rect x="776" y="160" width="160" height="80" rx="8" fill="#2d3142"/>
+        <rect x="776" y="160" width="160" height="80" rx="8" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1.4"/>
+        <text x="856" y="196" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Completed</text>
+        <text x="856" y="216" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">exit / notify customer</text>
+
+        <!-- State 5: Cancelled (Failure state) -->
+        <rect x="440" y="304" width="168" height="80" rx="8" fill="#2d3142"/>
+        <rect x="440" y="304" width="168" height="80" rx="8" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+        <text x="524" y="340" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cancelled</text>
+        <text x="524" y="360" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">entry / release stock & log</text>
+
+        <!-- ================= LEGEND STRIP ================= -->
+        <line x1="40" y1="416" x2="1000" y2="416" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+        <text x="40" y="432" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEYENDA</text>
+
+        <rect x="40" y="444" width="14" height="10" rx="2" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+        <text x="60" y="452" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Estado Focal / Final Exitoso</text>
+
+        <rect x="220" y="444" width="14" height="10" rx="2" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="240" y="452" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Estado Activo</text>
+
+        <rect x="380" y="444" width="14" height="10" rx="2" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+        <text x="400" y="452" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Estado de Compensación</text>
+
+        <line x1="560" y1="448" x2="588" y2="448" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <text x="596" y="452" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Flujo Feliz</text>
+
+        <line x1="720" y1="448" x2="748" y2="448" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="756" y="452" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Rollback / Compensación</text>
+      </svg>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="cards-grid">
+      <div class="card">
+        <p class="eyebrow">TRANSICIÓN DETERMINISTA</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>Flujo Feliz Principal</h3>
+        </div>
+        <ul>
+          <li>Inicia en <code>Pending</code> tras validar el payload en el Gateway.</li>
+          <li>Reserva de stock atómica antes de procesar pagos.</li>
+          <li>Transición a <code>Completed</code> garantiza idempotencia.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">PATRÓN SAGA & COMPENSACIÓN</p>
+        <div class="card-header">
+          <span class="card-dot blue"></span>
+          <h3>Resiliencia ante Fallos</h3>
+        </div>
+        <ul>
+          <li>Si el cobro falla, se invoca liberación de inventario.</li>
+          <li>Transición a <code>Cancelled</code> emite evento de compensación.</li>
+          <li>Trazabilidad completa en Seq con el mismo <code>CorrelationId</code>.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">CONSISTENCIA EVENTUAL</p>
+        <div class="card-header">
+          <span class="card-dot muted"></span>
+          <h3>Auditoría de Estados</h3>
+        </div>
+        <ul>
+          <li>Cada cambio de estado registra timestamp y actor en Postgres.</li>
+          <li>Previene transiciones inválidas (ej. Cancelar una orden enviada).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Generado con diagram-design · Máquina de Estados Editorial</span>
+      <span>Domain State Pattern · OrderService · ASP.NET Core 8</span>
+    </div>
+  </div>
+</body>
+</html>

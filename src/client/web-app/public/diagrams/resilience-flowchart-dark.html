@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resiliencia & Circuit Breaker · Diagrama de Flujo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #2d3142;
+      --color-paper-2: #393e53;
+      --color-ink:     #f5f5f5;
+      --color-muted:   #bfc0c0;
+      --color-accent:  #f08a59;
+      --color-link:    #6a95d8;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1120px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 2.5vw + 0.8rem, 2.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--color-muted);
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .diagram-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 960px;
+      display: block;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--color-paper-2);
+      border: 1px solid rgba(245, 245, 245, 0.12);
+      border-radius: 6px;
+      padding: 1.25rem;
+    }
+
+    .card .eyebrow {
+      font-size: 0.64rem;
+      color: var(--color-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.blue { background: var(--color-link); }
+    .card-dot.muted { background: var(--color-muted); }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .card ul {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .card ul li::before {
+      content: "— ";
+      color: rgba(245, 245, 245, 0.4);
+    }
+
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(245, 245, 245, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Tolerancia a Fallos · Diagrama de Flujo</p>
+    <h1>Resiliencia, Reintentos y Fallback en el Gateway</h1>
+    <p class="subtitle">Lógica de decisión ante caídas de microservicios: evaluación de sondeos de salud, apertura de disyuntores (Circuit Breaker) y respuestas degradadas.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="flowchart-dark-title flowchart-dark-desc">
+        <title id="flowchart-dark-title">Lógica de Resiliencia y Circuit Breaker</title>
+        <desc id="flowchart-dark-desc">Diagrama de flujo que ilustra la toma de decisiones en el API Gateway ante peticiones entrantes, evaluación de salud del destino, reintentos con backoff y respuesta de fallback.</desc>
+
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(245,245,245,0.08)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#f08a59"/>
+          </marker>
+        </defs>
+
+        <!-- Base Background -->
+        <rect width="100%" height="100%" fill="#2d3142"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.6"/>
+
+        <!-- ================= FLOW ARROWS (Drawn First) ================= -->
+
+        <!-- Start -> Health Check -->
+        <line x1="420" y1="84" x2="420" y2="120" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Health Check -> Decision 1 -->
+        <line x1="420" y1="168" x2="420" y2="200" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Decision 1: YES -> Forward Request -->
+        <line x1="420" y1="288" x2="420" y2="328" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Decision 1: NO -> Circuit Open Fallback (Right) -->
+        <line x1="520" y1="244" x2="680" y2="244" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Forward Request -> Decision 2 -->
+        <line x1="420" y1="376" x2="420" y2="408" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Decision 2: YES -> Success 200 OK (Coral Happy Path) -->
+        <line x1="420" y1="496" x2="420" y2="528" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Decision 2: NO -> Retry Policy (Right) -->
+        <line x1="520" y1="452" x2="680" y2="452" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Retry -> Fallback Merge (Down) -->
+        <line x1="780" y1="284" x2="780" y2="412" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- ================= LABELS ================= -->
+        <rect x="404" y="296" width="32" height="12" rx="2" fill="#2d3142"/>
+        <text x="420" y="305" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SÍ</text>
+
+        <rect x="580" y="234" width="32" height="12" rx="2" fill="#2d3142"/>
+        <text x="596" y="243" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">NO</text>
+
+        <rect x="404" y="504" width="32" height="12" rx="2" fill="#2d3142"/>
+        <text x="420" y="513" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SÍ</text>
+
+        <rect x="576" y="442" width="48" height="12" rx="2" fill="#2d3142"/>
+        <text x="600" y="451" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FALLO</text>
+
+        <!-- ================= NODES ================= -->
+
+        <!-- Start Node (Oval) -->
+        <rect x="312" y="40" width="216" height="44" rx="22" fill="#2d3142"/>
+        <rect x="312" y="40" width="216" height="44" rx="22" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+        <text x="420" y="66" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Petición HTTP Entrante</text>
+
+        <!-- Step 1: Health Evaluation -->
+        <rect x="300" y="120" width="240" height="48" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="420" y="142" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif" text-anchor="middle">Consultar Estado de Sondeo</text>
+        <text x="420" y="158" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">GET /health · YARP Active Monitor</text>
+
+        <!-- Decision 1: Target Healthy? (Diamond cx=420, cy=244) -->
+        <polygon points="420 200, 520 244, 420 288, 320 244"
+                 fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="420" y="240" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">¿Destino</text>
+        <text x="420" y="256" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Saludable?</text>
+
+        <!-- Step 2: Forward Request -->
+        <rect x="300" y="328" width="240" height="48" rx="6" fill="#393e53" stroke="#f08a59" stroke-width="1"/>
+        <text x="420" y="350" fill="#f5f5f5" font-size="12" font-family="'Geist', sans-serif" text-anchor="middle">Reenviar por Proxy Inverso</text>
+        <text x="420" y="366" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Inyectar X-Correlation-ID</text>
+
+        <!-- Decision 2: 2xx Response? (Diamond cx=420, cy=452) -->
+        <polygon points="420 408, 520 452, 420 496, 320 452"
+                 fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="420" y="448" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">¿Respuesta</text>
+        <text x="420" y="464" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Exitosa 2xx?</text>
+
+        <!-- End Happy Path: 200 OK (Oval Coral) -->
+        <rect x="312" y="528" width="216" height="40" rx="20" fill="#2d3142"/>
+        <rect x="312" y="528" width="216" height="40" rx="20" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1.4"/>
+        <text x="420" y="552" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">200 OK · Emitir a Seq</text>
+
+        <!-- Action: Circuit Breaker Open (Right side) -->
+        <rect x="680" y="216" width="200" height="56" rx="6" fill="#393e53" stroke="#bfc0c0" stroke-width="1"/>
+        <text x="780" y="240" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Circuit Breaker OPEN</text>
+        <text x="780" y="258" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Pausar enrutamiento</text>
+
+        <!-- Action: Fallback Response -->
+        <rect x="680" y="412" width="200" height="64" rx="6" fill="#393e53" stroke="#bfc0c0" stroke-width="1"/>
+        <text x="780" y="438" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Fallback Degradado</text>
+        <text x="780" y="456" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">503 Service Unavailable</text>
+        <text x="780" y="470" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">ProblemDetails + Seq Alert</text>
+
+      </svg>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="cards-grid">
+      <div class="card">
+        <p class="eyebrow">DETECCIÓN PROACTIVA</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>Active Health Probing</h3>
+        </div>
+        <ul>
+          <li>YARP sondea periódicamente cada clúster en <code>/health</code>.</li>
+          <li>Si un nodo falla más de 2 veces, se marca como no saludable.</li>
+          <li>Las peticiones se redirigen automáticamente a instancias sanas.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">PROTECCIÓN CONTRA CASCADAS</p>
+        <div class="card-header">
+          <span class="card-dot blue"></span>
+          <h3>Patrón Circuit Breaker</h3>
+        </div>
+        <ul>
+          <li>Evita saturar servicios caídos con peticiones que fallarán.</li>
+          <li>Transiciona a estado <code>Half-Open</code> tras un periodo de enfriamiento.</li>
+          <li>Reanuda el tráfico cuando el sondeo vuelve a responder 200 OK.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">EXPERIENCIA DE USUARIO</p>
+        <div class="card-header">
+          <span class="card-dot muted"></span>
+          <h3>Respuestas Degradadas</h3>
+        </div>
+        <ul>
+          <li>El frontend recibe un <code>ProblemDetails</code> RFC 7807 legible.</li>
+          <li>El usuario ve el banner de advertencia sin caída total del sitio.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Generado con diagram-design · Diagrama de Flujo Editorial</span>
+      <span>Circuit Breaker & Fallback · YARP Reverse Proxy</span>
+    </div>
+  </div>
+</body>
+</html>

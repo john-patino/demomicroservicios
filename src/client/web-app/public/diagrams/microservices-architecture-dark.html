@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microservicios & Observabilidad · Arquitectura</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #2d3142;
+      --color-paper-2: #393e53;
+      --color-ink:     #f5f5f5;
+      --color-muted:   #bfc0c0;
+      --color-accent:  #f08a59;
+      --color-link:    #6a95d8;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1100px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 2.5vw + 0.8rem, 2.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--color-muted);
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .diagram-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 960px;
+      display: block;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--color-paper-2);
+      border: 1px solid rgba(245, 245, 245, 0.12);
+      border-radius: 6px;
+      padding: 1.25rem;
+    }
+
+    .card .eyebrow {
+      font-size: 0.64rem;
+      color: var(--color-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .card-dot.coral { background: var(--color-accent); }
+    .card-dot.blue { background: var(--color-link); }
+    .card-dot.muted { background: var(--color-muted); }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    .card p, .card ul {
+      font-size: 0.82rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+    }
+
+    .card ul {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .card ul li::before {
+      content: "— ";
+      color: rgba(245, 245, 245, 0.4);
+    }
+
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(245, 245, 245, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--color-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Arquitectura de Referencia · Demo Microservicios</p>
+    <h1>Topología de Servicios & Observabilidad Distribuida</h1>
+    <p class="subtitle">Enrutamiento centralizado vía YARP Reverse Proxy, microservicios de dominio aislados y sumidero unificado de telemetría estructurada en Seq.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1040 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="microservices-arch-dark-title microservices-arch-dark-desc">
+        <title id="microservices-arch-dark-title">Arquitectura de Microservicios con YARP y Seq</title>
+        <desc id="microservices-arch-dark-desc">Diagrama de arquitectura en modo oscuro que ilustra las peticiones de cliente entrando por el API Gateway YARP, enrutadas a UserService, ProductService y OrderService, con envío asíncrono de trazas a Seq.</desc>
+
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(245,245,245,0.08)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#f08a59"/>
+          </marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#6a95d8"/>
+          </marker>
+        </defs>
+
+        <!-- Base Background -->
+        <rect width="100%" height="100%" fill="#2d3142"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.6"/>
+
+        <!-- ZONE 1: Client & Edge Zone -->
+        <rect x="32" y="152" width="176" height="160" rx="8"
+              fill="rgba(245,245,245,0.02)" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+        <rect x="68" y="156" width="104" height="12" rx="2" fill="#2d3142"/>
+        <text x="120" y="165" fill="rgba(245,245,245,0.35)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">CLIENTE WEB</text>
+
+        <!-- ZONE 2: Domain Services (Private Network) -->
+        <rect x="536" y="64" width="208" height="352" rx="8"
+              fill="rgba(245,245,245,0.02)" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+        <rect x="580" y="68" width="120" height="12" rx="2" fill="#2d3142"/>
+        <text x="640" y="77" fill="rgba(245,245,245,0.35)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">RED DE DOMINIO</text>
+
+        <!-- ZONE 3: Observability Plane -->
+        <rect x="808" y="120" width="216" height="224" rx="8"
+              fill="rgba(245,245,245,0.02)" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+        <rect x="856" y="124" width="120" height="12" rx="2" fill="#2d3142"/>
+        <text x="916" y="133" fill="rgba(245,245,245,0.35)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">OBSERVABILIDAD</text>
+
+        <!-- ================= CONNECTORS (Drawn before boxes) ================= -->
+
+        <!-- 1. Client -> Gateway (HTTPS :5000) -->
+        <line x1="192" y1="232" x2="280" y2="232" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+        <!-- 2. Gateway -> UserService (/api/users) : Right + Up Elbow -->
+        <path d="M 448,200 H 496 Q 504,200 504,192 V 136 Q 504,128 512,128 H 560"
+              fill="none" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- 3. Gateway -> ProductService (/api/products) : Direct Horizontal -->
+        <line x1="448" y1="232" x2="560" y2="232" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- 4. Gateway -> OrderService (/api/orders) : Right + Down Elbow -->
+        <path d="M 448,264 H 496 Q 504,264 504,272 V 328 Q 504,336 512,336 H 560"
+              fill="none" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- 5. UserService -> Seq Sink (Telemetry stream) -->
+        <path d="M 720,128 H 768 Q 776,128 776,136 V 176 Q 776,184 784,184 H 832"
+              fill="none" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- 6. ProductService -> Seq Sink (Telemetry stream) -->
+        <line x1="720" y1="232" x2="832" y2="232" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- 7. OrderService -> Seq Sink (Telemetry stream) -->
+        <path d="M 720,336 H 768 Q 776,336 776,328 V 288 Q 776,280 784,280 H 832"
+              fill="none" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- 8. Gateway -> Seq Sink (Transit under Domain Services) -->
+        <path d="M 364,296 V 416 Q 364,424 372,424 H 908 Q 916,424 916,416 V 312"
+              fill="none" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- ================= CONNECTOR LABELS (With mask & 8px gap) ================= -->
+
+        <!-- Label: Client -> Gateway -->
+        <rect x="200" y="212" width="72" height="12" rx="2" fill="#2d3142"/>
+        <text x="236" y="221" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">HTTPS :5000</text>
+
+        <!-- Label: Gateway -> UserService -->
+        <rect x="452" y="180" width="48" height="12" rx="2" fill="#2d3142"/>
+        <text x="476" y="189" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.06em">/USERS</text>
+
+        <!-- Label: Gateway -> ProductService -->
+        <rect x="472" y="212" width="64" height="12" rx="2" fill="#2d3142"/>
+        <text x="504" y="221" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.06em">/PRODUCTS</text>
+
+        <!-- Label: Gateway -> OrderService -->
+        <rect x="452" y="244" width="48" height="12" rx="2" fill="#2d3142"/>
+        <text x="476" y="253" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.06em">/ORDERS</text>
+
+        <!-- Label: ProductService -> Seq Sink -->
+        <rect x="744" y="212" width="64" height="12" rx="2" fill="#2d3142"/>
+        <text x="776" y="221" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">SERILOG</text>
+
+        <!-- Label: Gateway -> Seq Sink -->
+        <rect x="608" y="404" width="64" height="12" rx="2" fill="#2d3142"/>
+        <text x="640" y="413" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">SEQ SINK</text>
+
+        <!-- ================= NODES ================= -->
+
+        <!-- NODE 1: React Client -->
+        <rect x="48" y="200" width="144" height="64" rx="6" fill="#2d3142"/>
+        <rect x="48" y="200" width="144" height="64" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+        <rect x="56" y="208" width="36" height="12" rx="2" fill="transparent" stroke="rgba(142,140,131,0.40)" stroke-width="0.8"/>
+        <text x="74" y="217" fill="#8e98ac" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CLIENT</text>
+        <text x="120" y="236" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">React Web App</text>
+        <text x="120" y="252" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Vite :3000 · SPA</text>
+
+        <!-- NODE 2: API Gateway (YARP) - Focal Accent -->
+        <rect x="280" y="168" width="168" height="128" rx="6" fill="#2d3142"/>
+        <rect x="280" y="168" width="168" height="128" rx="6" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1.2"/>
+        <rect x="288" y="176" width="48" height="12" rx="2" fill="transparent" stroke="rgba(240,138,89,0.50)" stroke-width="0.8"/>
+        <text x="312" y="185" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GATEWAY</text>
+        <text x="436" y="284" fill="rgba(240,138,89,0.12)" font-size="32" font-weight="600" font-family="'Geist Mono', monospace" text-anchor="end">01</text>
+        <text x="364" y="212" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">API Gateway</text>
+        <text x="364" y="228" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">YARP :5000 · Reverse Proxy</text>
+        <text x="364" y="252" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">X-Correlation-ID Dispatch</text>
+        <text x="364" y="268" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Active Health Probes</text>
+
+        <!-- NODE 3: UserService -->
+        <rect x="560" y="96" width="160" height="64" rx="6" fill="#2d3142"/>
+        <rect x="560" y="96" width="160" height="64" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <rect x="568" y="104" width="44" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.40)" stroke-width="0.8"/>
+        <text x="590" y="113" fill="#f5f5f5" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
+        <text x="640" y="132" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">UserService</text>
+        <text x="640" y="148" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">.NET 8 · :5001 · Postgres</text>
+
+        <!-- NODE 4: ProductService -->
+        <rect x="560" y="200" width="160" height="64" rx="6" fill="#2d3142"/>
+        <rect x="560" y="200" width="160" height="64" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <rect x="568" y="208" width="44" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.40)" stroke-width="0.8"/>
+        <text x="590" y="217" fill="#f5f5f5" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
+        <text x="640" y="236" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">ProductService</text>
+        <text x="640" y="252" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">.NET 8 · :5002 · Postgres</text>
+
+        <!-- NODE 5: OrderService -->
+        <rect x="560" y="304" width="160" height="64" rx="6" fill="#2d3142"/>
+        <rect x="560" y="304" width="160" height="64" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <rect x="568" y="312" width="44" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.40)" stroke-width="0.8"/>
+        <text x="590" y="321" fill="#f5f5f5" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SERVICE</text>
+        <text x="640" y="340" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">OrderService</text>
+        <text x="640" y="356" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">.NET 8 · :5003 · Postgres</text>
+
+        <!-- NODE 6: Seq Sink -->
+        <rect x="832" y="160" width="168" height="152" rx="6" fill="#2d3142"/>
+        <rect x="832" y="160" width="168" height="152" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+        <rect x="840" y="168" width="32" height="12" rx="2" fill="transparent" stroke="rgba(191,192,192,0.50)" stroke-width="0.8"/>
+        <text x="856" y="177" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SINK</text>
+        <text x="916" y="208" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Seq Ingestion</text>
+        <text x="916" y="224" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">:5341 (Ingest) · :8081 (UI)</text>
+        <text x="916" y="252" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Correlation Tracking</text>
+        <text x="916" y="268" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Compact Json Events</text>
+        <text x="916" y="284" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Error & Root Cause RCA</text>
+
+        <!-- ================= LEGEND STRIP ================= -->
+        <line x1="48" y1="472" x2="992" y2="472" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+        <text x="48" y="488" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEYENDA</text>
+
+        <!-- Legend Items -->
+        <rect x="48" y="504" width="14" height="10" rx="2" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+        <text x="68" y="512" fill="#bfc0c0" font-size="8" font-family="'Geist', sans-serif">Gateway Focal (YARP)</text>
+
+        <rect x="224" y="504" width="14" height="10" rx="2" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+        <text x="244" y="512" fill="#bfc0c0" font-size="8" font-family="'Geist', sans-serif">Servicio Núcleo (.NET 8)</text>
+
+        <rect x="400" y="504" width="14" height="10" rx="2" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+        <text x="420" y="512" fill="#bfc0c0" font-size="8" font-family="'Geist', sans-serif">Sumidero de Logs (Seq)</text>
+
+        <rect x="580" y="504" width="14" height="10" rx="2" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+        <text x="600" y="512" fill="#bfc0c0" font-size="8" font-family="'Geist', sans-serif">Cliente Web (React)</text>
+
+        <line x1="740" y1="508" x2="768" y2="508" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <text x="776" y="512" fill="#bfc0c0" font-size="8" font-family="'Geist', sans-serif">Petición HTTP Externa</text>
+
+        <line x1="896" y1="508" x2="924" y2="508" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="932" y="512" fill="#bfc0c0" font-size="8" font-family="'Geist', sans-serif">Telemetría Asíncrona</text>
+      </svg>
+    </div>
+
+    <!-- Summary Cards Grid -->
+    <div class="cards-grid">
+      <div class="card">
+        <p class="eyebrow">PUNTO DE ENTRADA ÚNICO</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>YARP API Gateway</h3>
+        </div>
+        <ul>
+          <li>Único puerto público (:5000) expuesto al exterior.</li>
+          <li>Inyección obligatoria de cabecera <code>X-Correlation-ID</code>.</li>
+          <li>Sondeo activo de salud con <code>/health</code> probes.</li>
+          <li>Desacoplamiento total entre frontend y red privada.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">DOMINIO DISTRIBUIDO</p>
+        <div class="card-header">
+          <span class="card-dot blue"></span>
+          <h3>Microservicios Independientes</h3>
+        </div>
+        <ul>
+          <li>UserService (:5001), ProductService (:5002), OrderService (:5003).</li>
+          <li>Base de datos aislada por servicio (Database-per-service).</li>
+          <li>Consumo transparente de <code>CorrelationIdMiddleware</code>.</li>
+          <li>Resiliencia ante caídas de nodos adyacentes.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="eyebrow">TRAZABILIDAD CENTRALIZADA</p>
+        <div class="card-header">
+          <span class="card-dot muted"></span>
+          <h3>Seq Observability Sink</h3>
+        </div>
+        <ul>
+          <li>Recepción por streaming compacto CLEF (:5341).</li>
+          <li>Búsquedas instantáneas por <code>CorrelationId</code>.</li>
+          <li>Inspección visual cronológica del árbol de llamadas.</li>
+          <li>Detección inmediata de fallos en cascada y RCA.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Generado con diagram-design · Sistema Editorial para Arquitectura</span>
+      <span>ASP.NET Core 8 · YARP · Seq · React 18</span>
+    </div>
+  </div>
+</body>
+</html>
